@@ -17,6 +17,13 @@
             @auth
                 <div class="flex items-center gap-4">
                     <a href="{{ route('tickets.index') }}" class="text-sm text-slate-300 hover:text-white">Daftar Tiket</a>
+
+                    @if (auth()->user()->isAdmin())
+                        <a href="{{ route('admin.users.index') }}" class="text-sm text-amber-300 hover:text-amber-200 font-medium">
+                            Manajemen User
+                        </a>
+                    @endif
+
                     <a href="{{ route('tickets.create') }}" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-3.5 py-1.5 rounded-lg transition">
                         + Buat Tiket
                     </a>
@@ -31,11 +38,6 @@
                             <button type="submit" class="text-xs text-red-400 hover:text-red-300 font-medium">Logout</button>
                         </form>
                     </div>
-                </div>
-            @else
-                <div class="flex items-center gap-3 text-sm">
-                    <a href="{{ route('login') }}" class="text-slate-300 hover:text-white">Login</a>
-                    <a href="{{ route('register') }}" class="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-lg font-medium">Register</a>
                 </div>
             @endauth
         </div>
