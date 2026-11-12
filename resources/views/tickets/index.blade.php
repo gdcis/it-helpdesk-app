@@ -110,12 +110,18 @@
                             </td>
                             <td class="py-3 px-4 text-right space-x-2">
                                 <a href="{{ route('tickets.show', $ticket) }}" class="text-blue-600 hover:underline text-xs font-medium">Detail</a>
-                                <a href="{{ route('tickets.edit', $ticket) }}" class="text-amber-600 hover:underline text-xs font-medium">Edit</a>
-                                <form action="{{ route('tickets.destroy', $ticket) }}" method="POST" class="inline" onsubmit="return confirm('Hapus tiket {{ $ticket->ticket_number }}?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-600 hover:underline text-xs font-medium">Hapus</button>
-                                </form>
+
+                                @if (auth()->user()->isAdmin() || $ticket->status === 'Open')
+                                    <a href="{{ route('tickets.edit', $ticket) }}" class="text-amber-600 hover:underline text-xs font-medium">Edit</a>
+                                @endif
+
+                                @if (auth()->user()->isAdmin())
+                                    <form action="{{ route('tickets.destroy', $ticket) }}" method="POST" class="inline" onsubmit="return confirm('Hapus tiket {{ $ticket->ticket_number }}?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-red-600 hover:underline text-xs font-medium">Hapus</button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty

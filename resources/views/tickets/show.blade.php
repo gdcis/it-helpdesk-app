@@ -63,6 +63,7 @@
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3">
+                    @if (auth()->user()->isAdmin() || $ticket->status === 'Open')
                     <div class="flex items-center gap-2">
                         <label class="text-xs font-medium text-slate-600">Ubah Status Sekaligus:</label>
                         <select name="status" class="border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs">
@@ -71,6 +72,9 @@
                             @endforeach
                         </select>
                     </div>
+                    @else
+                        <div></div>
+                    @endif
 
                     <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg">
                         Kirim Balasan

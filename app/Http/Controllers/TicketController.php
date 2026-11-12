@@ -4,42 +4,31 @@ namespace App\Http\Controllers;
 
 use App\Models\Ticket;
 use App\Models\TicketReply;
-use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class TicketController extends Controller
 {
-    /**
-     * Helper sementara untuk mendapatkan ID user aktif atau membuat user default
-     * jika fitur login belum diaktifkan.
-     */
-    private function resolveUserId(): int
-    {
-        if (Auth::check()) {
-            return Auth::id();
-        }
-
-        $defaultUser = User::firstOrCreate(
-            ['email' => 'it.support@local.test'],
-            [
-                'name' => 'Staff IT Support',
-                'password' => Hash::make('password123'),
-            ]
-        );
-
-        return $defaultUser->id;
-    }
-
-    /**
-     * Menampilkan daftar tiket dengan filter status & pencarian
-     */
     public function index(Request $request): View
     {
-        $query = Ticket::with('user')->latest();
+        $user = Auth::user();
+        $baseQuery = Ticket::query();
+
+        // User biasa hanya melihat tiket yang dibuatnya sendiri
+        if (! $user->isAdmin()) {
+            $baseQuery->where('user_id', $user->id);
+        }
+
+        $stats = [
+            'total' => (clone $baseQuery)->count(),
+            'open' => (clone $baseQuery)->where('status', 'Open')->count(),
+            'in_progress' => (clone $baseQuery)->where('status', 'In Progress')->count(),
+            'resolved' => (clone $baseQuery)->whereIn('status', ['Resolved', 'Closed'])->count(),
+        ];
+
+        $query = (clone $baseQuery)->with('user')->latest();
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -59,27 +48,14 @@ class TicketController extends Controller
 
         $tickets = $query->paginate(10)->withQueryString();
 
-        $stats = [
-            'total' => Ticket::count(),
-            'open' => Ticket::where('status', 'Open')->count(),
-            'in_progress' => Ticket::where('status', 'In Progress')->count(),
-            'resolved' => Ticket::whereIn('status', ['Resolved', 'Closed'])->count(),
-        ];
-
         return view('tickets.index', compact('tickets', 'stats'));
     }
 
-    /**
-     * Form pembuatan tiket baru
-     */
     public function create(): View
     {
         return view('tickets.create');
     }
 
-    /**
-     * Menyimpan tiket baru ke database Supabase
-     */
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -91,7 +67,7 @@ class TicketController extends Controller
 
         $ticket = Ticket::create([
             'ticket_number' => Ticket::generateTicketNumber(),
-            'user_id' => $this->resolveUserId(),
+            'user_id' => Auth::id(),
             'title' => $validated['title'],
             'category' => $validated['category'],
             'priority' => $validated['priority'],
@@ -104,37 +80,48 @@ class TicketController extends Controller
             ->with('success', "Tiket {$ticket->ticket_number} berhasil dibuat.");
     }
 
-    /**
-     * Menampilkan detail tiket beserta riwayat balasan
-     */
     public function show(Ticket $ticket): View
     {
+        $this->authorizeAccess($ticket);
         $ticket->load(['user', 'replies.user']);
 
         return view('tickets.show', compact('ticket'));
     }
 
-    /**
-     * Form edit tiket
-     */
     public function edit(Ticket $ticket): View
     {
+        $this->authorizeAccess($ticket);
+
+        // User biasa tidak bisa mengedit tiket jika sudah diproses IT
+        if (! Auth::user()->isAdmin() && $ticket->status !== 'Open') {
+            abort(403, 'Tiket yang sedang diproses atau selesai tidak dapat diubah oleh pelapor.');
+        }
+
         return view('tickets.edit', compact('ticket'));
     }
 
-    /**
-     * Memperbarui data tiket & status penanganan
-     */
     public function update(Request $request, Ticket $ticket): RedirectResponse
     {
-        $validated = $request->validate([
+        $this->authorizeAccess($ticket);
+        $user = Auth::user();
+
+        if (! $user->isAdmin() && $ticket->status !== 'Open') {
+            abort(403, 'Tiket tidak dapat diubah.');
+        }
+
+        $rules = [
             'title' => ['required', 'string', 'max:255'],
             'category' => ['required', 'in:Hardware,Software,Network,Account,Other'],
             'priority' => ['required', 'in:Low,Medium,High,Critical'],
-            'status' => ['required', 'in:Open,In Progress,Resolved,Closed'],
             'description' => ['required', 'string'],
-        ]);
+        ];
 
+        // Hanya Admin IT yang boleh mengubah status tiket
+        if ($user->isAdmin()) {
+            $rules['status'] = ['required', 'in:Open,In Progress,Resolved,Closed'];
+        }
+
+        $validated = $request->validate($rules);
         $ticket->update($validated);
 
         return redirect()
@@ -142,11 +129,13 @@ class TicketController extends Controller
             ->with('success', "Tiket {$ticket->ticket_number} berhasil diperbarui.");
     }
 
-    /**
-     * Menghapus tiket
-     */
     public function destroy(Ticket $ticket): RedirectResponse
     {
+        // Hanya Admin IT yang bisa menghapus tiket
+        if (! Auth::user()->isAdmin()) {
+            abort(403, 'Hanya Admin IT yang dapat menghapus tiket.');
+        }
+
         $number = $ticket->ticket_number;
         $ticket->delete();
 
@@ -155,11 +144,11 @@ class TicketController extends Controller
             ->with('success', "Tiket {$number} berhasil dihapus.");
     }
 
-    /**
-     * Menambahkan balasan / catatan tindak lanjut pada tiket
-     */
     public function storeReply(Request $request, Ticket $ticket): RedirectResponse
     {
+        $this->authorizeAccess($ticket);
+        $user = Auth::user();
+
         $validated = $request->validate([
             'message' => ['required', 'string'],
             'status' => ['nullable', 'in:Open,In Progress,Resolved,Closed'],
@@ -167,16 +156,25 @@ class TicketController extends Controller
 
         TicketReply::create([
             'ticket_id' => $ticket->id,
-            'user_id' => $this->resolveUserId(),
+            'user_id' => $user->id,
             'message' => $validated['message'],
         ]);
 
-        if (!empty($validated['status']) && $validated['status'] !== $ticket->status) {
+        // Hanya Admin IT yang bisa mengubah status saat membalas tiket
+        if ($user->isAdmin() && ! empty($validated['status']) && $validated['status'] !== $ticket->status) {
             $ticket->update(['status' => $validated['status']]);
         }
 
         return redirect()
             ->route('tickets.show', $ticket)
             ->with('success', 'Balasan berhasil ditambahkan.');
+    }
+
+    private function authorizeAccess(Ticket $ticket): void
+    {
+        $user = Auth::user();
+        if (! $user->isAdmin() && $ticket->user_id !== $user->id) {
+            abort(403, 'Anda tidak memiliki akses ke tiket ini.');
+        }
     }
 }
