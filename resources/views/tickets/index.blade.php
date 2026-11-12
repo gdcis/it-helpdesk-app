@@ -23,33 +23,49 @@
         </div>
     </div>
 
-    <!-- Filter & Pencarian -->
+    <!-- Filter, Pencarian & Export Laporan -->
     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
-        <form method="GET" action="{{ route('tickets.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <input type="text" name="search" value="{{ request('search') }}"
-                   placeholder="Cari nomor tiket atau judul..."
-                   class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <form method="GET" action="{{ route('tickets.index') }}" class="space-y-3">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                <input type="text" name="search" value="{{ request('search') }}"
+                       placeholder="Cari nomor tiket atau judul..."
+                       class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
 
-            <select name="status" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Semua Status</option>
-                @foreach (['Open', 'In Progress', 'Resolved', 'Closed'] as $status)
-                    <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
-                @endforeach
-            </select>
+                <select name="status" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Semua Status</option>
+                    @foreach (['Open', 'In Progress', 'Resolved', 'Closed'] as $status)
+                        <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
+                    @endforeach
+                </select>
 
-            <select name="priority" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Semua Prioritas</option>
-                @foreach (['Low', 'Medium', 'High', 'Critical'] as $priority)
-                    <option value="{{ $priority }}" @selected(request('priority') === $priority)>{{ $priority }}</option>
-                @endforeach
-            </select>
+                <select name="priority" class="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">Semua Prioritas</option>
+                    @foreach (['Low', 'Medium', 'High', 'Critical'] as $priority)
+                        <option value="{{ $priority }}" @selected(request('priority') === $priority)>{{ $priority }}</option>
+                    @endforeach
+                </select>
 
-            <div class="flex gap-2">
-                <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex-1">
-                    Filter
-                </button>
-                <a href="{{ route('tickets.index') }}" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-3 py-2 rounded-lg">
-                    Reset
+                <input type="date" name="start_date" value="{{ request('start_date') }}" title="Dari Tanggal"
+                       class="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+                <input type="date" name="end_date" value="{{ request('end_date') }}" title="Sampai Tanggal"
+                       class="border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                <div class="flex gap-2">
+                    <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium px-4 py-2 rounded-lg">
+                        Terapkan Filter
+                    </button>
+                    <a href="{{ route('tickets.index') }}" class="bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium px-3 py-2 rounded-lg">
+                        Reset
+                    </a>
+                </div>
+
+                <!-- Tombol Export otomatis membawa parameter filter aktif -->
+                <a href="{{ route('tickets.export', request()->query()) }}"
+                   class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2 rounded-lg inline-flex items-center gap-1.5 transition">
+                    <span>Export Excel (.CSV)</span>
                 </a>
             </div>
         </form>

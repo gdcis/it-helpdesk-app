@@ -23,6 +23,9 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+    // Wajib diletakkan SEBELUM Route::resource('tickets', ...)
+    Route::get('tickets/export', [TicketController::class, 'export'])->name('tickets.export');
+
     Route::resource('tickets', TicketController::class);
     Route::post('tickets/{ticket}/replies', [TicketController::class, 'storeReply'])
         ->name('tickets.replies.store');

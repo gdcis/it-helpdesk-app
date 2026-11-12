@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TicketController extends Controller
 {
@@ -204,5 +205,91 @@ class TicketController extends Controller
         if (! $user->isAdmin() && $ticket->user_id !== $user->id) {
             abort(403, 'Anda tidak memiliki akses ke tiket ini.');
         }
+    }
+
+    /**
+     * Export laporan data tiket ke file CSV (kompatibel langsung dengan Microsoft Excel)
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $user = Auth::user();
+        $query = Ticket::with(['user', 'replies'])->latest();
+
+        // Pembatasan akses sesuai role
+        if (! $user->isAdmin()) {
+            $query->where('user_id', $user->id);
+        }
+
+        // Terapkan filter yang sama dengan halaman index
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('ticket_number', 'ilike', "%{$search}%")
+                  ->orWhere('title', 'ilike', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('priority')) {
+            $query->where('priority', $request->input('priority'));
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->input('start_date'));
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->input('end_date'));
+        }
+
+        $tickets = $query->get();
+        $fileName = 'laporan-tiket-it-' . now()->format('Ymd-His') . '.csv';
+
+        return response()->streamDownload(function () use ($tickets) {
+            $handle = fopen('php://output', 'w');
+
+            // Tambahkan UTF-8 BOM agar Microsoft Excel otomatis mendeteksi encoding UTF-8
+            fwrite($handle, "\xEF\xBB\xBF");
+
+            // Header Kolom
+            fputcsv($handle, [
+                'No. Tiket',
+                'Tanggal Dibuat',
+                'Pelapor',
+                'Email Pelapor',
+                'Kategori',
+                'Prioritas',
+                'Status',
+                'Judul Kendala',
+                'Deskripsi Detail',
+                'Jumlah Tindak Lanjut',
+                'Terakhir Diperbarui',
+                'URL Lampiran',
+            ]);
+
+            foreach ($tickets as $ticket) {
+                fputcsv($handle, [
+                    $ticket->ticket_number,
+                    $ticket->created_at->format('Y-m-d H:i:s'),
+                    $ticket->user->name ?? '-',
+                    $ticket->user->email ?? '-',
+                    $ticket->category,
+                    $ticket->priority,
+                    $ticket->status,
+                    $ticket->title,
+                    preg_replace("/\r|\n/", ' ', $ticket->description),
+                    $ticket->replies->count(),
+                    $ticket->updated_at->format('Y-m-d H:i:s'),
+                    $ticket->attachment_url ?? '-',
+                ]);
+            }
+
+            fclose($handle);
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
     }
 }
