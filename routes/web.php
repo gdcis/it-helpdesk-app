@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\TicketController;
+use App\Http\Controllers\TicketController;
 use App\Http\Controllers\UserManagementController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,9 +24,10 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
     // Wajib diletakkan SEBELUM Route::resource('tickets', ...)
     Route::get('tickets/export', [TicketController::class, 'export'])->name('tickets.export');
-
     Route::resource('tickets', TicketController::class);
     Route::post('tickets/{ticket}/replies', [TicketController::class, 'storeReply'])
         ->name('tickets.replies.store');

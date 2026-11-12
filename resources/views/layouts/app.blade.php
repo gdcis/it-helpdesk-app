@@ -16,7 +16,12 @@
 
             @auth
                 <div class="flex items-center gap-4">
-                    <a href="{{ route('tickets.index') }}" class="text-sm text-slate-300 hover:text-white">Daftar Tiket</a>
+                    <a href="{{ route('dashboard') }}" class="text-sm {{ request()->routeIs('dashboard') ? 'text-white font-semibold' : 'text-slate-300 hover:text-white' }}">
+                        Dashboard
+                    </a>
+                    <a href="{{ route('tickets.index') }}" class="text-sm {{ request()->routeIs('tickets.*') ? 'text-white font-semibold' : 'text-slate-300 hover:text-white' }}">
+                        Daftar Tiket
+                    </a>
 
                     @if (auth()->user()->isAdmin())
                         <a href="{{ route('admin.users.index') }}" class="text-sm text-amber-300 hover:text-amber-200 font-medium">
