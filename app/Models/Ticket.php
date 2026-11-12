@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Ticket extends Model
 {
@@ -35,6 +36,18 @@ class Ticket extends Model
     public function replies(): HasMany
     {
         return $this->hasMany(TicketReply::class);
+    }
+
+    /**
+     * Mendapatkan URL publik file screenshot di Supabase Storage
+     */
+    public function getAttachmentUrlAttribute(): ?string
+    {
+        if (! $this->attachment_path) {
+            return null;
+        }
+
+        return Storage::disk('s3')->url($this->attachment_path);
     }
 
     /**

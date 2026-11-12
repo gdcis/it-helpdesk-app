@@ -61,6 +61,27 @@
                           class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">{{ old('description', $ticket->description) }}</textarea>
             </div>
 
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Lampiran Screenshot</label>
+
+                @if ($ticket->attachment_url)
+                    <div class="mb-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <p class="text-xs text-slate-500 mb-2">Screenshot saat ini:</p>
+                        <a href="{{ $ticket->attachment_url }}" target="_blank">
+                            <img src="{{ $ticket->attachment_url }}" alt="Lampiran Tiket" class="max-h-48 rounded border border-slate-300 object-contain">
+                        </a>
+                        <label class="inline-flex items-center gap-2 mt-2 text-xs text-red-600 cursor-pointer">
+                            <input type="checkbox" name="remove_attachment" value="1" class="rounded border-slate-300">
+                            <span>Hapus lampiran gambar ini</span>
+                        </label>
+                    </div>
+                @endif
+
+                <input type="file" name="attachment" accept="image/png,image/jpeg,image/webp"
+                       class="w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-slate-300 rounded-lg p-1.5">
+                <p class="text-xs text-slate-400 mt-1">Pilih file baru jika ingin mengganti screenshot (JPG/PNG/WEBP, maks. 2 MB).</p>
+            </div>
+
             <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
                 <a href="{{ route('tickets.show', $ticket) }}" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-900">Batal</a>
                 <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-5 py-2 rounded-lg">

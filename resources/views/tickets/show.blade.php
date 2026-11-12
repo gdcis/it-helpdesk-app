@@ -33,6 +33,18 @@
             <div class="prose prose-sm max-w-none text-slate-700 whitespace-pre-line">
                 {{ $ticket->description }}
             </div>
+
+            @if ($ticket->attachment_url)
+                <div class="mt-6 pt-4 border-t border-slate-200">
+                    <p class="text-xs font-semibold text-slate-600 uppercase mb-2">Lampiran Screenshot Kendala</p>
+                    <a href="{{ $ticket->attachment_url }}" target="_blank" rel="noopener noreferrer" class="inline-block group">
+                        <img src="{{ $ticket->attachment_url }}"
+                             alt="Screenshot {{ $ticket->ticket_number }}"
+                             class="max-h-96 rounded-lg border border-slate-300 shadow-sm group-hover:opacity-95 transition">
+                        <span class="block text-xs text-blue-600 mt-1.5 group-hover:underline">Klik gambar untuk membuka ukuran penuh &nearr;</span>
+                    </a>
+                </div>
+            @endif
         </div>
 
         <!-- Riwayat Tindak Lanjut / Balasan -->

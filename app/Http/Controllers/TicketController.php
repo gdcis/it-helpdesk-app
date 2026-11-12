@@ -7,6 +7,7 @@ use App\Models\TicketReply;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class TicketController extends Controller
@@ -63,7 +64,13 @@ class TicketController extends Controller
             'category' => ['required', 'in:Hardware,Software,Network,Account,Other'],
             'priority' => ['required', 'in:Low,Medium,High,Critical'],
             'description' => ['required', 'string'],
+            'attachment' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
+
+        $attachmentPath = null;
+        if ($request->hasFile('attachment')) {
+            $attachmentPath = $request->file('attachment')->store('screenshots', 's3');
+        }
 
         $ticket = Ticket::create([
             'ticket_number' => Ticket::generateTicketNumber(),
@@ -72,6 +79,7 @@ class TicketController extends Controller
             'category' => $validated['category'],
             'priority' => $validated['priority'],
             'description' => $validated['description'],
+            'attachment_path' => $attachmentPath,
             'status' => 'Open',
         ]);
 
@@ -114,6 +122,7 @@ class TicketController extends Controller
             'category' => ['required', 'in:Hardware,Software,Network,Account,Other'],
             'priority' => ['required', 'in:Low,Medium,High,Critical'],
             'description' => ['required', 'string'],
+            'attachment' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ];
 
         // Hanya Admin IT yang boleh mengubah status tiket
@@ -122,6 +131,20 @@ class TicketController extends Controller
         }
 
         $validated = $request->validate($rules);
+
+        if ($request->hasFile('attachment')) {
+            // Hapus file screenshot lama di Supabase Storage jika ada
+            if ($ticket->attachment_path && Storage::disk('s3')->exists($ticket->attachment_path)) {
+                Storage::disk('s3')->delete($ticket->attachment_path);
+            }
+
+            $validated['attachment_path'] = $request->file('attachment')->store('screenshots', 's3');
+        } elseif ($request->boolean('remove_attachment') && $ticket->attachment_path) {
+            Storage::disk('s3')->delete($ticket->attachment_path);
+            $validated['attachment_path'] = null;
+        }
+
+        unset($validated['attachment']);
         $ticket->update($validated);
 
         return redirect()
@@ -134,6 +157,11 @@ class TicketController extends Controller
         // Hanya Admin IT yang bisa menghapus tiket
         if (! Auth::user()->isAdmin()) {
             abort(403, 'Hanya Admin IT yang dapat menghapus tiket.');
+        }
+
+        // Bersihkan file screenshot di Supabase Storage sebelum menghapus tiket
+        if ($ticket->attachment_path && Storage::disk('s3')->exists($ticket->attachment_path)) {
+            Storage::disk('s3')->delete($ticket->attachment_path);
         }
 
         $number = $ticket->ticket_number;
