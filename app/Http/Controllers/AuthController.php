@@ -47,11 +47,6 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    public function showRegister(): View
-    {
-        return view('auth.register');
-    }
-
     public function register(Request $request): RedirectResponse
     {
         $validated = $request->validate([
