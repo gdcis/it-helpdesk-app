@@ -24,8 +24,15 @@
                     </a>
 
                     @if (auth()->user()->isAdmin())
-                        <a href="{{ route('admin.users.index') }}" class="text-sm text-amber-300 hover:text-amber-200 font-medium">
-                            Manajemen User
+                        @php $pendingUsersCount = \App\Models\User::where('is_approved', false)->count(); @endphp
+                        <a href="{{ route('admin.users.index', ['approval' => $pendingUsersCount > 0 ? 'pending' : null]) }}"
+                           class="text-sm text-amber-300 hover:text-amber-200 font-medium inline-flex items-center gap-1.5">
+                            <span>Manajemen User</span>
+                            @if ($pendingUsersCount > 0)
+                                <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                    {{ $pendingUsersCount }}
+                                </span>
+                            @endif
                         </a>
                     @endif
 

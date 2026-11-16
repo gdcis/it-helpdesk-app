@@ -23,10 +23,23 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $user = Auth::user();
+
+            // Blokir masuk jika akun belum disetujui Admin IT
+            if (! $user->isApproved()) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return back()->withErrors([
+                    'email' => 'Akun Anda masih menunggu persetujuan (aktivasi) dari Admin IT.',
+                ])->onlyInput('email');
+            }
+
             $request->session()->regenerate();
 
             return redirect()->intended(route('dashboard'))
-                ->with('success', 'Selamat datang kembali, ' . Auth::user()->name . '!');
+                ->with('success', 'Selamat datang kembali, ' . $user->name . '!');
         }
 
         return back()->withErrors([
@@ -47,21 +60,28 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:6', 'confirmed'],
         ]);
 
-        // User pertama yang mendaftar otomatis dijadikan Admin IT, selanjutnya menjadi User biasa
-        $role = User::count() === 0 ? 'admin' : 'user';
+        $isFirstUser = User::count() === 0;
+        $role = $isFirstUser ? 'admin' : 'user';
+        $isApproved = $isFirstUser; // Hanya Admin IT pertama yang langsung aktif
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
             'role' => $role,
+            'is_approved' => $isApproved,
         ]);
 
-        Auth::login($user);
-        $request->session()->regenerate();
+        if ($isFirstUser) {
+            Auth::login($user);
+            $request->session()->regenerate();
 
-        return redirect()->route('tickets.index')
-            ->with('success', "Akun berhasil dibuat dengan role: " . strtoupper($role));
+            return redirect()->route('dashboard')
+                ->with('success', 'Akun Admin IT pertama berhasil dibuat dan langsung aktif.');
+        }
+
+        return redirect()->route('login')
+            ->with('success', 'Registrasi berhasil! Silakan tunggu Admin IT menyetujui akun Anda sebelum login.');
     }
 
     public function logout(Request $request): RedirectResponse

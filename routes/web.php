@@ -35,7 +35,9 @@ Route::middleware('auth')->group(function () {
     // Rute Khusus Admin IT (Middleware EnsureUserHasRole)
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+        Route::patch('/users/{user}/approve', [UserManagementController::class, 'approve'])->name('users.approve');
         Route::patch('/users/{user}/role', [UserManagementController::class, 'updateRole'])->name('users.update-role');
+        Route::patch('/users/{user}/reset-password', [UserManagementController::class, 'resetPassword'])->name('users.reset-password');
         Route::delete('/users/{user}', [UserManagementController::class, 'destroy'])->name('users.destroy');
     });
 });

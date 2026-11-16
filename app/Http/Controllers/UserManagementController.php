@@ -15,7 +15,10 @@ class UserManagementController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = User::withCount('tickets')->latest();
+        // Urutkan pendaftar Pending di paling atas, lalu berdasarkan waktu daftar terbaru
+        $query = User::withCount('tickets')
+            ->orderBy('is_approved', 'asc')
+            ->latest();
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -29,15 +32,38 @@ class UserManagementController extends Controller
             $query->where('role', $request->input('role'));
         }
 
+        if ($request->filled('approval')) {
+            if ($request->input('approval') === 'pending') {
+                $query->where('is_approved', false);
+            } elseif ($request->input('approval') === 'approved') {
+                $query->where('is_approved', true);
+            }
+        }
+
         $users = $query->paginate(10)->withQueryString();
 
         $counts = [
             'total' => User::count(),
+            'pending' => User::where('is_approved', false)->count(),
             'admin' => User::where('role', 'admin')->count(),
             'user' => User::where('role', 'user')->count(),
         ];
 
         return view('users.index', compact('users', 'counts'));
+    }
+
+    /**
+     * Menyetujui / mengaktifkan akun user baru
+     */
+    public function approve(User $user): RedirectResponse
+    {
+        if ($user->isApproved()) {
+            return back()->with('success', "Akun {$user->name} sudah berstatus aktif.");
+        }
+
+        $user->update(['is_approved' => true]);
+
+        return back()->with('success', "Akun {$user->name} ({$user->email}) berhasil disetujui dan kini dapat login.");
     }
 
     /**
