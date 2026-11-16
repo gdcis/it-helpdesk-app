@@ -35,6 +35,11 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
+        return $this->role === 'admin';
+    }
+
+    public function isApproved(): bool
+    {
         return (bool) $this->is_approved;
     }
 

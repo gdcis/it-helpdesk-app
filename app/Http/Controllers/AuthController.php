@@ -6,15 +6,23 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AuthController extends Controller
 {
+    /**
+     * Menampilkan halaman form login
+     */
     public function showLogin(): View
     {
         return view('auth.login');
     }
 
+    /**
+     * Memproses login & mengecek status persetujuan (is_approved)
+     */
     public function login(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
@@ -47,6 +55,17 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
+    /**
+     * Menampilkan halaman form pendaftaran akun baru
+     */
+    public function showRegister(): View
+    {
+        return view('auth.register');
+    }
+
+    /**
+     * Memproses registrasi akun baru (Akun pertama otomatis Admin IT & aktif)
+     */
     public function register(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -79,6 +98,39 @@ class AuthController extends Controller
             ->with('success', 'Registrasi berhasil! Silakan tunggu Admin IT menyetujui akun Anda sebelum login.');
     }
 
+    /**
+     * Menampilkan halaman ganti password mandiri bagi user yang sedang login
+     */
+    public function showChangePassword(): View
+    {
+        return view('auth.change-password');
+    }
+
+    /**
+     * Memproses perubahan password mandiri
+     */
+    public function updatePassword(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'string', 'min:6', 'confirmed', 'different:current_password'],
+        ], [
+            'current_password.current_password' => 'Password saat ini yang Anda masukkan salah.',
+            'password.different' => 'Password baru tidak boleh sama dengan password lama.',
+        ]);
+
+        $user = $request->user();
+        $user->update([
+            'password' => Hash::make($validated['password']),
+            'remember_token' => Str::random(60),
+        ]);
+
+        return back()->with('success', 'Password akun Anda berhasil diperbarui.');
+    }
+
+    /**
+     * Memproses logout pengguna
+     */
     public function logout(Request $request): RedirectResponse
     {
         Auth::logout();

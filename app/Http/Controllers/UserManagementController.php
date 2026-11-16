@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class UserManagementController extends Controller
@@ -93,6 +95,35 @@ class UserManagementController extends Controller
         $roleLabel = $validated['role'] === 'admin' ? 'Admin IT' : 'User';
 
         return back()->with('success', "Role untuk {$user->name} berhasil diubah menjadi {$roleLabel}.");
+    }
+
+    /**
+     * Mereset password user menjadi password sementara acak (khusus Admin IT)
+     */
+    public function resetPassword(User $user): RedirectResponse
+    {
+        if ($user->id === Auth::id()) {
+            return back()->withErrors([
+                'user' => 'Gunakan menu Ganti Password di profil Anda untuk mengubah password sendiri.',
+            ]);
+        }
+
+        // Membuat password sementara 8 karakter acak (contoh: IT-9a4k7m2p)
+        $temporaryPassword = 'IT-' . Str::lower(Str::random(8));
+
+        $user->update([
+            'password' => Hash::make($temporaryPassword),
+            'remember_token' => Str::random(60),
+        ]);
+
+        // Kirim data password sementara ke session agar banner notifikasi muncul di users/index.blade.php
+        return back()
+            ->with('success', "Password untuk {$user->name} ({$user->email}) berhasil direset.")
+            ->with('temp_password_info', [
+                'name' => $user->name,
+                'email' => $user->email,
+                'password' => $temporaryPassword,
+            ]);
     }
 
     /**

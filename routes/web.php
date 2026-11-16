@@ -24,6 +24,10 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+    // Ganti Password Mandiri
+    Route::get('/change-password', [AuthController::class, 'showChangePassword'])->name('password.edit');
+    Route::put('/change-password', [AuthController::class, 'updatePassword'])->name('password.update');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Wajib diletakkan SEBELUM Route::resource('tickets', ...)
